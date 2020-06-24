@@ -264,12 +264,28 @@ xfpm_brightness_setup_xrandr (XfpmBrightness *brightness)
   return ret;
 }
 
+static gint32 _step(gint32 current, XfpmBrightness *brightness) {
+	gint32 maximum = brightness->priv->max_level;
+	gint32 step;
+	if (current < maximum / 5)
+		step = maximum / 100;
+	else if (current < maximum / 3)
+		step = maximum / 50;
+	else if (current < maximum / 2)
+		step = maximum / 25;
+	else
+		step = brightness->priv->step;
+	step = MAX(step, 1);
+	return step;
+}
+
 static gboolean
 xfpm_brightness_xrand_up (XfpmBrightness *brightness, gint32 *new_level)
 {
   gint32 hw_level;
   gboolean ret = FALSE;
   gint32 set_level;
+  gint32 step;
 
   ret = xfpm_brightness_xrandr_get_level (brightness, brightness->priv->output, &hw_level);
 
@@ -282,7 +298,8 @@ xfpm_brightness_xrand_up (XfpmBrightness *brightness, gint32 *new_level)
     return TRUE;
   }
 
-  set_level = MIN (xfpm_brightness_inc (brightness, hw_level), brightness->priv->max_level);
+  step = _step(hw_level, brightness);
+  set_level = MIN (hw_level + step, brightness->priv->max_level);
 
   g_warn_if_fail (xfpm_brightness_xrandr_set_level (brightness, brightness->priv->output, set_level));
 
@@ -310,6 +327,7 @@ xfpm_brightness_xrand_down (XfpmBrightness *brightness, gint32 *new_level)
   gint32 hw_level;
   gboolean ret;
   gint32 set_level;
+  gint32 step;
 
   ret = xfpm_brightness_xrandr_get_level (brightness, brightness->priv->output, &hw_level);
 
@@ -322,7 +340,8 @@ xfpm_brightness_xrand_down (XfpmBrightness *brightness, gint32 *new_level)
     return TRUE;
   }
 
-  set_level = MAX (xfpm_brightness_dec (brightness, hw_level), brightness->priv->min_level);
+  step = _step(hw_level, brightness);
+  set_level = MAX(1, MAX (hw_level - step, brightness->priv->min_level));
 
   g_warn_if_fail (xfpm_brightness_xrandr_set_level (brightness, brightness->priv->output, set_level));
 
